@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4A9C4960011DB1CA11722A02 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 4A9C4960011DB1CA11722A01 /* LICENSE */; };
 		2C419065234914A700142C69 /* DMMediaIcon.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C419064234914A700142C69 /* DMMediaIcon.m */; };
 		2C4418BF1DA88F5900767E74 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C4418BE1DA88F5900767E74 /* AppDelegate.m */; };
 		2C4418C21DA88F5900767E74 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C4418C11DA88F5900767E74 /* main.m */; };
@@ -21,7 +22,6 @@
 		2C76059A1DAD2B9500130FF7 /* DMButtonCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C7605991DAD2B9500130FF7 /* DMButtonCell.m */; };
 		2C76059C1DAD3EFC00130FF7 /* cdm-60x48.png in Resources */ = {isa = PBXBuildFile; fileRef = 2C76059B1DAD3EFC00130FF7 /* cdm-60x48.png */; };
 		2C76059E1DADC7B300130FF7 /* cdm-16x48-bar.png in Resources */ = {isa = PBXBuildFile; fileRef = 2C76059D1DADC7B300130FF7 /* cdm-16x48-bar.png */; };
-		2C7605B41DB439EF00130FF7 /* LinkTextField.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C7605B31DB439EF00130FF7 /* LinkTextField.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +42,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		4A9C4960011DB1CA11722A01 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../LICENSE; sourceTree = SOURCE_ROOT; };
 		2C044733217FE42900DEDD59 /* AmorphousDiskMark.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AmorphousDiskMark.entitlements; sourceTree = "<group>"; };
 		2C419063234914A700142C69 /* DMMediaIcon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DMMediaIcon.h; sourceTree = "<group>"; };
 		2C419064234914A700142C69 /* DMMediaIcon.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DMMediaIcon.m; sourceTree = "<group>"; };
@@ -69,8 +70,6 @@
 		2C7605991DAD2B9500130FF7 /* DMButtonCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DMButtonCell.m; sourceTree = "<group>"; };
 		2C76059B1DAD3EFC00130FF7 /* cdm-60x48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "cdm-60x48.png"; path = "img/cdm-60x48.png"; sourceTree = "<group>"; };
 		2C76059D1DADC7B300130FF7 /* cdm-16x48-bar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "cdm-16x48-bar.png"; path = "img/cdm-16x48-bar.png"; sourceTree = "<group>"; };
-		2C7605B21DB439EF00130FF7 /* LinkTextField.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LinkTextField.h; sourceTree = "<group>"; };
-		2C7605B31DB439EF00130FF7 /* LinkTextField.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LinkTextField.m; sourceTree = "<group>"; };
 		2C7605B51DB85BDF00130FF7 /* Common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Common.h; sourceTree = "<group>"; };
 		2CE6BEA523D3D7F200A57E55 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -106,6 +105,7 @@
 				2C4418BC1DA88F5900767E74 /* AmorphousDiskMark */,
 				2C4418D01DA88F5900767E74 /* AmorphousDiskMarkTests */,
 				2C4418DB1DA88F5900767E74 /* AmorphousDiskMarkUITests */,
+				4A9C4960011DB1CA11722A01 /* LICENSE */,
 				2C4418BB1DA88F5900767E74 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -137,8 +137,6 @@
 				2C7605991DAD2B9500130FF7 /* DMButtonCell.m */,
 				2C4418F91DAC811000767E74 /* DMButton.h */,
 				2C4418FA1DAC811000767E74 /* DMButton.m */,
-				2C7605B21DB439EF00130FF7 /* LinkTextField.h */,
-				2C7605B31DB439EF00130FF7 /* LinkTextField.m */,
 				2C419063234914A700142C69 /* DMMediaIcon.h */,
 				2C419064234914A700142C69 /* DMMediaIcon.m */,
 				2C4418C31DA88F5900767E74 /* Assets.xcassets */,
@@ -260,27 +258,21 @@
 				TargetAttributes = {
 					2C4418B91DA88F5900767E74 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = 4G5652JFRC;
-						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
 							com.apple.HardenedRuntime = {
 								enabled = 1;
 							};
 							com.apple.Sandbox = {
-								enabled = 0;
+								enabled = 1;
 							};
 						};
 					};
 					2C4418CC1DA88F5900767E74 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = 4G5652JFRC;
-						ProvisioningStyle = Automatic;
 						TestTargetID = 2C4418B91DA88F5900767E74;
 					};
 					2C4418D71DA88F5900767E74 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = 4G5652JFRC;
-						ProvisioningStyle = Automatic;
 						TestTargetID = 2C4418B91DA88F5900767E74;
 					};
 				};
@@ -312,6 +304,7 @@
 			files = (
 				2C4418C41DA88F5900767E74 /* Assets.xcassets in Resources */,
 				2C4418C71DA88F5900767E74 /* MainMenu.xib in Resources */,
+				4A9C4960011DB1CA11722A02 /* LICENSE in Resources */,
 				2C76059E1DADC7B300130FF7 /* cdm-16x48-bar.png in Resources */,
 				2C76059C1DAD3EFC00130FF7 /* cdm-60x48.png in Resources */,
 			);
@@ -340,7 +333,6 @@
 			files = (
 				2C419065234914A700142C69 /* DMMediaIcon.m in Sources */,
 				2C7605971DACA0DD00130FF7 /* DMTextView.m in Sources */,
-				2C7605B41DB439EF00130FF7 /* LinkTextField.m in Sources */,
 				2C4418FB1DAC811000767E74 /* DMButton.m in Sources */,
 				2C4418C21DA88F5900767E74 /* main.m in Sources */,
 				2C4418BF1DA88F5900767E74 /* AppDelegate.m in Sources */,
@@ -425,7 +417,8 @@
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -444,7 +437,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -488,7 +481,8 @@
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -501,7 +495,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"-Wextra",
@@ -519,13 +513,12 @@
 				CODE_SIGN_ENTITLEMENTS = AmorphousDiskMark/AmorphousDiskMark.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 45;
-				DEVELOPMENT_TEAM = 4G5652JFRC;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = AmorphousDiskMark/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MARKETING_VERSION = 4.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.katsurashareware.AmorphousDiskMark;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.allquixotic.AmorphousDiskMark;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -537,13 +530,12 @@
 				CODE_SIGN_ENTITLEMENTS = AmorphousDiskMark/AmorphousDiskMark.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 45;
-				DEVELOPMENT_TEAM = 4G5652JFRC;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = AmorphousDiskMark/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MARKETING_VERSION = 4.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.katsurashareware.AmorphousDiskMark;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.allquixotic.AmorphousDiskMark;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -553,10 +545,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4G5652JFRC;
 				INFOPLIST_FILE = AmorphousDiskMarkTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.katsurashareware.AmorphousDiskMarkTests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.allquixotic.AmorphousDiskMarkTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AmorphousDiskMark.app/Contents/MacOS/AmorphousDiskMark";
 			};
@@ -567,10 +558,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4G5652JFRC;
 				INFOPLIST_FILE = AmorphousDiskMarkTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.katsurashareware.AmorphousDiskMarkTests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.allquixotic.AmorphousDiskMarkTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AmorphousDiskMark.app/Contents/MacOS/AmorphousDiskMark";
 			};
@@ -580,10 +570,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4G5652JFRC;
 				INFOPLIST_FILE = AmorphousDiskMarkUITests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.katsurashareware.AmorphousDiskMarkUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.allquixotic.AmorphousDiskMarkUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = AmorphousDiskMark;
 			};
@@ -593,10 +582,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4G5652JFRC;
 				INFOPLIST_FILE = AmorphousDiskMarkUITests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.katsurashareware.AmorphousDiskMarkUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.allquixotic.AmorphousDiskMarkUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = AmorphousDiskMark;
 			};

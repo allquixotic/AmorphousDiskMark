@@ -1,7 +1,7 @@
 # AmorphousDiskMark
 A macOS storage benchmark tool that measures read/write performance in MB/s and IOPS. Inspired by [CrystalDiskMark](http://crystalmark.info/) for Windows.
 
-[![Download on the Mac App Store](https://developer.apple.com/app-store/marketing/guidelines/images/badge-download-on-the-mac-app-store.svg)](https://apps.apple.com/app/amorphousdiskmark/id1168254295)
+Download the signed, notarized DMG from [GitHub Releases](https://github.com/allquixotic/AmorphousDiskMark/releases). Open the DMG and drag AmorphousDiskMark into Applications.
 
 ## Features
 - **Sequential benchmarks:** 1 MiB block reads/writes, single-queue (QD=1) and multi-queue (QD up to 1024)
@@ -9,6 +9,7 @@ A macOS storage benchmark tool that measures read/write performance in MB/s and 
 - **Flexible test parameters:** configurable iteration count, test data (random/zero), measurement size (16 MiB–64 GiB), interval (0 s–10 min), and duration limit
 - **Dual units:** view results in MB/s or IOPS; tooltips show both
 - **Copy-pasteable results:** export measurements as formatted plain text
+- **Local storage:** benchmark the startup disk, external drives, or a user-selected folder on a local volume
 
 ## Example Output
 ```
@@ -23,11 +24,23 @@ Sequential Write 1MiB (QD=   8) :   773.81 MB/s [    738.0 IOPS]
 ```
 
 ## Requirements
-- macOS 10.9.5 or later
+- macOS 12 Monterey or later on Apple silicon or Intel
 - Xcode (to build from source)
 
 ## Building
-Open `AmorphousDiskMark/AmorphousDiskMark.xcodeproj` in Xcode and build the scheme. The app is sandboxed and requests user-selected file read/write access for target volume selection.
+Open `AmorphousDiskMark/AmorphousDiskMark.xcodeproj` in Xcode and build the AmorphousDiskMark scheme. To build the unsigned Universal release from the command line, run this from the repository root:
+
+```sh
+xcodebuild build \
+  -project AmorphousDiskMark/AmorphousDiskMark.xcodeproj \
+  -scheme AmorphousDiskMark \
+  -configuration Release \
+  -destination 'generic/platform=macOS' \
+  -derivedDataPath dist/build \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+The app uses macOS system frameworks and has no third-party code dependencies. Release builds use Developer ID signing with hardened runtime and App Sandbox. The sandbox grants read/write access to user-selected files and folders. The app has no network entitlements or update checks.
 
 ## Architecture
 The codebase is Objective-C, structured around a few key components:
@@ -40,13 +53,12 @@ The codebase is Objective-C, structured around a few key components:
 | `DMTextView` | Custom text view with logarithmic bar graph rendering (matching CrystalDiskMark's visual style) |
 | `DMButton` / `DMButtonCell` | Custom button with dark mode support |
 | `DMMediaIcon` | Resolves storage device icons from IOKit kernel extension bundles |
-| `LinkTextField` | Clickable URL text field |
 
 ### How benchmarking works
 AmorphousDiskMark spawns threads to perform I/O against a temporary file on the target volume. The design mirrors CrystalDiskMark's use of Microsoft's `diskspd` parameters — block size, queue depth, thread count, duration, and warmup — adapted for macOS. Queue depth is implemented via concurrent threads (up to the macOS per-task limit of 2048) rather than POSIX AIO, which only supports 16 queues on macOS.
 
 ## Usage
-1. Select a target volume from the dropdown.
+1. Select a local target volume from the dropdown.
 2. Click **All** (or an individual test button).
 3. When finished, press ⌘S to save a screenshot, or copy the plain-text results.
 

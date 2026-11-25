@@ -156,11 +156,7 @@ enum
 @property (WEAK) IBOutlet NSPanel *helpWindow;
 @property (WEAK) IBOutlet NSPanel *aboutWindow;
 
-@property (WEAK) IBOutlet NSTextField *helpLlinkTextField;
-
 @property (WEAK) IBOutlet NSTextField *versionTextField;
-@property (WEAK) IBOutlet NSTextField *linkTextField;
-@property (WEAK) IBOutlet NSTextField *ksLinkTextField;
 
 @property (WEAK) IBOutlet NSTextField *mReadTitleTextField;
 @property (WEAK) IBOutlet NSTextField *mWriteTitleTextField;
@@ -949,7 +945,7 @@ enum
         //
         readOnly = @"Read/Write test cannot run on a read-only target.\n \n";
     }
-    // device: "/dev/disk0s2" for non-APFS, "/dev/disk1s1 (Physical Store: disk0s2)" for APFS, or "//user@host/share-point" for remote file system.
+    // device: "/dev/disk0s2" for non-APFS, "/dev/disk1s1 (Physical Store: disk0s2)" for APFS.
     NSString *device = mount[@"fromname"];
     NSString *apfsPhysicalStore = mount[@"apfsPhysicalStore"];
     if (apfsPhysicalStore.length != 0)
@@ -1066,9 +1062,6 @@ enum
     NSImage *image = nil;
     if (iconDict.count != 0) {
         image = [DMMediaIcon iconWithDictionary:iconDict];
-    } else if (!((NSNumber *)mount[@"isLocal"]).boolValue) {
-        // get the network icon
-        image = [NSImage imageNamed:NSImageNameNetwork];
     }
     return [image menuItemImage];
 }
@@ -1077,8 +1070,7 @@ enum
 {
     // remember the current selection.
     // the current selection may go away
-    // when the user unmounts the device
-    // or the remote mount point.
+    // when the user unmounts the device.
     //NSDictionary *selectedMount = [[_mStoragePopUpButton selectedItem] representedObject];
     //KSLog(@"%s: entered: selected mount: %@", __func__, selectedMount[@"daVolumeName"]);
     
@@ -1242,6 +1234,14 @@ enum
     return [[NSFileManager defaultManager] isWritableFileAtPath:path];
 }
 
+- (void)showLocalFolderRequired
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"Local folder required";
+    alert.informativeText = @"Choose a writable folder on a local volume.";
+    [alert beginSheetModalForWindow:self.window completionHandler:nil];
+}
+
 // "mbps", "iops"
 - (void)updateUnitTypeMenu
 {
@@ -1271,7 +1271,7 @@ enum
     KSLog(@"%s called: %@", __func__, keys);
 
     // in case of an unmount, default the current volume to "/"
-    if ([DiskUtil volumeNameAtPath:_targetVolumePath] == nil) {
+    if ([DiskUtil mountPointForPath:_targetVolumePath] == nil) {
         _targetVolumePath = _bootVolumeDirectoryPath;
     }
 
@@ -1320,10 +1320,6 @@ enum
     if ((action == @selector(copy:)) ||
         (action == @selector(saveDocument:)) ||
         (action == @selector(saveDocumentAs:)))
-    {
-        return YES;
-    }
-    else if (action == @selector(printWindow:))
     {
         return YES;
     }
@@ -1481,6 +1477,12 @@ enum
         return;
     }
     
+    if ([DiskUtil mountPointForPath:self.testPath] == nil)
+    {
+        [self showLocalFolderRequired];
+        return;
+    }
+
     [self prepareForTest:tag];
     switch (tag)
     {
@@ -1617,15 +1619,13 @@ enum
     if (tag == kSelectFolderTag) {
         // selected the volume menu item or the select folder menu item
         NSOpenPanel *openPanel = [NSOpenPanel openPanel];
-        if (representedObject != nil) {
-            NSString *volumePath = representedObject[@"onname"];
-            openPanel.directoryURL = [NSURL fileURLWithPath:volumePath isDirectory:YES];
-        }
+        NSString *volumePath = representedObject[@"onname"] ?: @"/Volumes";
+        openPanel.directoryURL = [NSURL fileURLWithPath:volumePath isDirectory:YES];
         openPanel.canChooseDirectories = YES;
         openPanel.canChooseFiles = NO;
         openPanel.canCreateDirectories = YES;
         openPanel.prompt = @"Choose";
-        openPanel.message = @"Choose a writable folder on the target volume you want to test:";
+        openPanel.message = @"Choose a writable folder on the local volume you want to test.";
         //openPanel.delegate = self;
         [openPanel beginSheetModalForWindow:_window completionHandler:^(NSModalResponse returnCode) {
             KSLog(@"returnCode: %@", @(returnCode));
@@ -1639,7 +1639,11 @@ enum
                 return;
             }
             NSString *path = openPanel.URL.path;
-            if (![self isWritableFileAtPath:path]) {
+            if ([DiskUtil mountPointForPath:path] == nil) {
+                [self selectCurrentVolume];
+                [self updateModelName];
+                [self showLocalFolderRequired];
+            } else if (![self isWritableFileAtPath:path]) {
                 NSAlert *alert = [[NSAlert alloc] init];
                 alert.messageText = @"Not writable";
                 alert.informativeText = @"The selected folder is not writable. Please select a writable folder.";
@@ -1652,7 +1656,7 @@ enum
                 // update the model name text field
                 [self updateModelName];
             } else {
-                self.targetVolumePath = openPanel.URL.path;
+                self.targetVolumePath = path;
                 [self updateStoragePopUpButton];
             }
         }];
@@ -1803,11 +1807,6 @@ enum
 {
     KSLog(@"%s: entered (sender: %@)", __func__, sender);
 
-    if (@available(macOS 10.10, *))
-    {
-        _helpLlinkTextField.textColor = [NSColor linkColor];
-    }
-
     [_helpWindow center];
     [_helpWindow makeKeyAndOrderFront:sender];
 }
@@ -1822,45 +1821,8 @@ enum
     NSDictionary* infoDict = [[NSBundle mainBundle] infoDictionary];
     NSString *versionString = [NSString stringWithFormat:NSLocalizedString(@"Version %@ (%@)", "Version %@ (%@)"), [infoDict objectForKey:@"CFBundleShortVersionString"], [infoDict objectForKey:@"CFBundleVersion"]];
     _versionTextField.stringValue = versionString;
-    if (@available(macOS 10.10, *))
-    {
-        _linkTextField.textColor = [NSColor linkColor];
-        _ksLinkTextField.textColor = [NSColor linkColor];
-    }
-    
     [_aboutWindow center];
     [_aboutWindow makeKeyAndOrderFront:sender];
-}
-
-#pragma mark --- print ---
-
-- (IBAction)printWindow:(id)sender
-{
-    KSLog(@"%s: entered (sender: %@)", __func__, sender);
-
-    NSImage *windowImage = [_window windowImage];
-    NSSize size = windowImage.size;
-    NSImageView *imageView = [[NSImageView alloc] initWithFrame:NSMakeRect(0, 0, size.width, size.height)];
-    imageView.image = windowImage;
-    //
-    // Mac App Store review rejected the app because the image
-    // on the print preview was getting clipped.
-    //
-#if 0
-    [imageView print:sender];
-#else
-#pragma unused(sender)
-    NSPrintInfo *pi = [NSPrintInfo sharedPrintInfo];
-    pi.horizontallyCentered = YES;
-    pi.horizontalPagination = NSPrintingPaginationModeFit;
-    pi.verticallyCentered = NO;
-    pi.verticalPagination = NSPrintingPaginationModeFit;
-    //pi.orientation = NSLandscapeOrientation;
-    NSPrintOperation *po = [NSPrintOperation printOperationWithView:imageView printInfo:pi];
-    NSPrintPanel *pp = po.printPanel;
-    pp.options |= NSPrintPanelShowsPageSetupAccessory;
-    [po runOperation];
-#endif
 }
 
 #pragma mark -- copy/cut ---
@@ -2075,7 +2037,6 @@ enum
     NSString *scoreHeaderFormat =
     @"---------------------------------------------------------------------\n"
     @"AmorphousDiskMark %@ (C) 2016-%@ Katsura Shareware\n"
-    @"                    Katsura Shareware : https://katsurashareware.com/\n"
     @"---------------------------------------------------------------------\n"
     @"* MB/s = 1,000,000 bytes/s [SATA/600 = 600,000,000 bytes/s]\n"
     @"* KB = 1,000 bytes, KiB = 1,024 bytes\n"
@@ -2195,8 +2156,17 @@ enum
     [savePanel beginSheetModalForWindow:_window completionHandler:^(NSInteger result) {
         if (result == NSModalResponseOK)
         {
-            // save the image as a PNG file
-            [data writeToURL:savePanel.URL atomically:NO];
+            NSURL *url = savePanel.URL;
+            if ([DiskUtil mountPointForPath:url.URLByDeletingLastPathComponent.path] == nil)
+            {
+                [self showLocalFolderRequired];
+                return;
+            }
+            NSError *error;
+            if (![data writeToURL:url options:NSDataWritingAtomic error:&error])
+            {
+                [NSApp presentError:error];
+            }
         }
     }];
 }

@@ -33,7 +33,7 @@
 + (NSString *)localizedFileSystemNameForKind:(NSString *)fstype type:(NSString *)type;
 + (NSString *)humanReadableSize:(uint64_t)size;
 
-+ (NSString *)volumeNameAtPath:(NSString *)path;
+// Returns nil for paths outside local filesystems or paths that cannot be resolved.
 + (NSString *)mountPointForPath:(NSString *)path;
 
 + (NSString *)usageWithMountInfo:(NSDictionary *)mount;

@@ -12,6 +12,9 @@
 #import <DiskArbitration/DiskArbitration.h>
 
 #import <sys/mount.h>
+#import <sys/param.h>
+#import <sys/stat.h>
+#import <unistd.h>
 
 #include <Cocoa/Cocoa.h>
 
@@ -62,10 +65,10 @@
     // write and read a random value to the given path
     // to try to wake (warm) the storage device up.
 
-    // getting the file system stat help? maybe not.
-    // it's probably already cached on memory.
-    struct statfs buf;
-    statfs(path.UTF8String, &buf);
+    if ([self mountPointForPath:path] == nil)
+    {
+        return [NSError errorWithDomain:NSPOSIXErrorDomain code:ENOTSUP userInfo:nil];
+    }
     
     // write something if writable (it better be).
     NSFileManager *fm = [NSFileManager defaultManager];
@@ -126,7 +129,7 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
         self.mountInfo = [DiskUtil scanMountInfo];
         KSLog(@"%s: mountInfo: %@", __func__, _mountInfo);
 
-        // NSWorkspace mount/unmount works with NFS mount which is good. but not with NFS unmount.
+        // Refresh the list when macOS reports a mount or unmount.
         NSNotificationCenter *nc = [[NSWorkspace sharedWorkspace] notificationCenter];
         [nc addObserver:self selector:@selector(volumesChanged:) name:NSWorkspaceDidMountNotification object:nil];
         [nc addObserver:self selector:@selector(volumesChanged:) name:NSWorkspaceDidUnmountNotification object:nil];
@@ -399,7 +402,8 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
     struct statfs *mounts;
     NSMutableArray *ma;
     
-    c = getmntinfo(&mounts, MNT_WAIT);
+    // Use cached metadata so enumeration never refreshes remote mounts.
+    c = getmntinfo_r_np(&mounts, MNT_NOWAIT);
     KSLog(@"%s: getmntinfo: %d", __func__, c);
     
     if (c == 0)
@@ -424,6 +428,10 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
     ma = [NSMutableArray array];
     for (i = 0; i < c; i++)
     {
+        if ((mounts[i].f_flags & MNT_LOCAL) == 0)
+        {
+            continue;
+        }
         NSString *fromname, *onname, *daVolumeName, *daDeviceVendor, *daDeviceModel, *daVolumeType, *apfsPhysicalStore;
         
         KSLog(@"[%d]: fstyle: %s, to: %s, from: %s, f_flags: 0x%08x (MNT_RDONLY: 0x%08x)", i, mounts[i].f_fstypename, mounts[i].f_mntonname, mounts[i].f_mntfromname, mounts[i].f_flags, (uint32_t)MNT_RDONLY);
@@ -460,18 +468,13 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
             continue;
         }
 
-        // skip "don't browse" and not NFS and not "/"
+        // Keep the boot volume visible even if it has the "don't browse" flag.
         BOOL dontBrowse = ((mounts[i].f_flags & MNT_DONTBROWSE) != 0);
-        BOOL isNFS = [fstype isEqualToString:@"nfs"];
-        KSLog(@"isNFS: %s", isNFS? "YES": "NO");
-        KSLog(@"dontBrowse: %s", dontBrowse? "YES": "NO");
-        if (dontBrowse && !isNFS && !isBootVolume) {
+        if (dontBrowse && !isBootVolume) {
             // skip the read/write Data APFS volume, the VM APFS volume, etc.
-            KSLog(@"[%d]: skip: don't browse and not NFS and not boot volume", i);
+            KSLog(@"[%d]: skip: don't browse", i);
             continue;
         }
-        
-        BOOL isLocal = ((mounts[i].f_flags & MNT_LOCAL) != 0);
 
         // CD/DVD/BD will be MNT_RDONLY. gray out in the storage popup button.
         BOOL isReadOnly = ((mounts[i].f_flags & MNT_RDONLY) != 0);
@@ -495,8 +498,8 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
         daDeviceModel = nil;  // DADeviceModel
         daVolumeType = nil;  // DAVolumeType
         apfsPhysicalStore = @"";
-        NSDictionary *daMediaIcon = nil;  // DAMediaIcon
-        NSString *daDevicePath = nil; // DADevicePath
+        NSDictionary *daMediaIcon = @{};
+        NSString *daDevicePath = @"";
 
         NSURL *url = [NSURL fileURLWithPath:onname];
         DADiskRef disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, [self daSession], (__bridge CFURLRef)url);
@@ -542,7 +545,7 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
             }
 
             // some devices don't have the vendor name.
-            if (daDeviceVendor != nil)
+            if (daDeviceVendor != nil && daDeviceModel != nil)
             {
                 // combine the vendor name and model name here.
                 daDeviceModel = [@[daDeviceVendor, daDeviceModel] componentsJoinedByString:@" "];
@@ -570,8 +573,6 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
         //  "ST4000DM000-1F2168" (Seagate hard drive)
         //  "Hitachi HDS722020ALA330" (Hitachi hard drive)
         //  "Apple Disk Image"
-        //  "Server Message Block: SMB"
-        //  "Network File System: NFS"
         if (daDeviceModel == nil)
         {
             daDeviceModel = @"Unknown Device";
@@ -624,50 +625,130 @@ static void diskArbitrationCallBack(DADiskRef disk, CFArrayRef keys, void *conte
         KSLog(@"[%d]: blockSize: %llu, freeSize: %llu, size: %llu, used: %llu", i, bsize, freeSize, size, percentUsed);
         
         //
-        // fromname: "/dev/disk0s2" or "//hkatsura@mac/stage" for remote volumes
+        // fromname: "/dev/disk0s2"
         // onmame:   "/" for the boot volume or "/Volumes/4TB" for non-boot volumes
         // apfsPhysicalStore: "disk0s2"
         //
-        [ma addObject:@{@"fromname": fromname, @"onname": onname, @"daVolumeName": daVolumeName, @"daDeviceModel": daDeviceModel, @"daVolumeType": daVolumeType, @"isBootVolume": @(isBootVolume), @"isReadOnly": @(isReadOnly), @"size": @(size), @"freeSize": @(freeSize), @"bsize": @(bsize), @"percentUsed": @(percentUsed), @"fstype": fstype, @"isLocal": @(isLocal), @"daMediaIcon": daMediaIcon, @"daDevicePath": daDevicePath, @"apfsPhysicalStore": apfsPhysicalStore}];
+        [ma addObject:@{@"fromname": fromname, @"onname": onname, @"daVolumeName": daVolumeName, @"daDeviceModel": daDeviceModel, @"daVolumeType": daVolumeType, @"isBootVolume": @(isBootVolume), @"isReadOnly": @(isReadOnly), @"size": @(size), @"freeSize": @(freeSize), @"bsize": @(bsize), @"percentUsed": @(percentUsed), @"fstype": fstype, @"daMediaIcon": daMediaIcon, @"daDevicePath": daDevicePath, @"apfsPhysicalStore": apfsPhysicalStore}];
     }
+    free(mounts);
     
     return [NSArray arrayWithArray:ma];
 }
 
-+ (NSString *)volumeNameAtPath:(NSString *)path {
-    KSLog(@"%s: path: %@", __func__, path);
-    // int statfs(const char *path, struct statfs *buf);
-    struct statfs s;
-    int r = statfs(path.UTF8String, &s);
-    if (r != 0) {
+static NSString * const dataMountPoint = @"/System/Volumes/Data";
+
+static NSSet<NSString *> *nonLocalMountPoints(void)
+{
+    struct statfs *mounts;
+    int count = getmntinfo_r_np(&mounts, MNT_NOWAIT);
+    if (count == 0)
+    {
         return nil;
     }
-    KSLog(@"%s: f_mntonname: %s, f_mntfromname: %s", __func__, s.f_mntonname, s.f_mntfromname);
-    NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:s.f_mntonname]];
-    DADiskRef disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, [self daSession], (__bridge CFURLRef)url);
-    CFDictionaryRef desc = DADiskCopyDescription(disk);
-    NSDictionary *dict = (__bridge_transfer NSDictionary *)desc;
-    KSLog(@"disk: %@, desc: %@", disk, dict);
-    CFRelease(disk);
-    return dict[@"DAVolumeName"];
+    NSMutableSet<NSString *> *paths = [NSMutableSet set];
+    NSString *dataPrefix = [dataMountPoint stringByAppendingString:@"/"];
+    for (int i = 0; i < count; i++)
+    {
+        if ((mounts[i].f_flags & MNT_LOCAL) != 0 &&
+            strcmp(mounts[i].f_fstypename, "autofs") != 0)
+        {
+            continue;
+        }
+        NSString *path = [NSFileManager.defaultManager stringWithFileSystemRepresentation:mounts[i].f_mntonname
+                                                                                   length:strlen(mounts[i].f_mntonname)];
+        [paths addObject:path.lowercaseString.precomposedStringWithCanonicalMapping];
+        if ([path hasPrefix:dataPrefix])
+        {
+            NSString *alias = [path substringFromIndex:dataMountPoint.length];
+            [paths addObject:alias.lowercaseString.precomposedStringWithCanonicalMapping];
+        }
+    }
+    free(mounts);
+    return paths;
 }
 
-+ (NSString *)mountPointForPath:(NSString *)path {
-    KSLog(@"%s: path: %@", __func__, path);
-    // int statfs(const char *path, struct statfs *buf);
-    struct statfs s;
-    int r = statfs(path.UTF8String, &s);
-    if (r != 0) {
-        return path;
+// Check each path component before resolving it. In particular, looking up a
+// path below an automount or following a link into one can trigger a mount.
+static NSString *resolveLocalPath(NSString *path)
+{
+    if (![path hasPrefix:@"/"])
+    {
+        return nil;
     }
-    KSLog(@"%s: f_mntonname: %s, f_mntfromname: %s", __func__, s.f_mntonname, s.f_mntfromname);
-    NSString *mp = [NSString stringWithUTF8String:s.f_mntonname];
-    if ([mp isEqualToString:@"/System/Volumes/Data"]) {
-        // special case. the APFS read/write boot volume is mounted at
-        // "/System/Volumes/Data".
-        mp = @"/";
+    NSSet<NSString *> *excludedMounts = nonLocalMountPoints();
+    if (excludedMounts == nil || [excludedMounts containsObject:@"/"])
+    {
+        return nil;
     }
-    return mp;
+
+    NSString *resolved = @"/";
+    NSArray<NSString *> *components = path.pathComponents;
+    int symlinks = 0;
+    NSUInteger index = 0;
+    while (index < components.count)
+    {
+        NSString *component = components[index++];
+        if ([component isEqualToString:@"/"] || [component isEqualToString:@"."])
+        {
+            continue;
+        }
+        if ([component isEqualToString:@".."])
+        {
+            resolved = resolved.stringByDeletingLastPathComponent;
+            continue;
+        }
+        NSString *candidate = [resolved stringByAppendingPathComponent:component];
+        if ([excludedMounts containsObject:candidate.lowercaseString.precomposedStringWithCanonicalMapping])
+        {
+            return nil;
+        }
+
+        struct stat info;
+        if (lstat(candidate.fileSystemRepresentation, &info) != 0)
+        {
+            return nil;
+        }
+        if (!S_ISLNK(info.st_mode))
+        {
+            resolved = candidate;
+            continue;
+        }
+        if (++symlinks > MAXSYMLINKS)
+        {
+            return nil;
+        }
+        char buffer[PATH_MAX];
+        ssize_t length = readlink(candidate.fileSystemRepresentation, buffer, sizeof(buffer));
+        if (length <= 0 || (size_t)length == sizeof(buffer))
+        {
+            return nil;
+        }
+        NSString *destination = [NSFileManager.defaultManager stringWithFileSystemRepresentation:buffer
+                                                                                           length:(NSUInteger)length];
+        if ([destination hasPrefix:@"/"])
+        {
+            resolved = @"/";
+        }
+        NSRange remainder = NSMakeRange(index, components.count - index);
+        components = [destination.pathComponents arrayByAddingObjectsFromArray:[components subarrayWithRange:remainder]];
+        index = 0;
+    }
+    return resolved;
+}
+
++ (NSString *)mountPointForPath:(NSString *)path
+{
+    NSString *localPath = resolveLocalPath(path);
+    struct statfs filesystem;
+    if (localPath == nil || statfs(localPath.fileSystemRepresentation, &filesystem) != 0 ||
+        (filesystem.f_flags & MNT_LOCAL) == 0)
+    {
+        return nil;
+    }
+    NSString *mountPoint = [NSString stringWithUTF8String:filesystem.f_mntonname];
+    // Treat the APFS data volume as part of the boot volume in the UI.
+    return [mountPoint isEqualToString:dataMountPoint] ? @"/" : mountPoint;
 }
 
 + (NSString *)usageWithMountInfo:(NSDictionary *)mount

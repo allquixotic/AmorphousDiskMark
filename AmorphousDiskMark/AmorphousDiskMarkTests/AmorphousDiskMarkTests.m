@@ -7,6 +7,9 @@
 //
 
 #import <XCTest/XCTest.h>
+#import <DiskArbitration/DiskArbitration.h>
+#import <sys/mount.h>
+#import "../AmorphousDiskMark/DiskUtil.h"
 
 @interface AmorphousDiskMarkTests : XCTestCase
 
@@ -14,26 +17,45 @@
 
 @implementation AmorphousDiskMarkTests
 
-- (void)setUp {
-    [super setUp];
-    // Put setup code here. This method is called before the invocation of each test method in the class.
+- (void)testBootVolumeAndTemporaryDirectoryAreLocal
+{
+    XCTAssertEqualObjects([DiskUtil mountPointForPath:@"/"], @"/");
+    XCTAssertNotNil([DiskUtil mountPointForPath:NSTemporaryDirectory()]);
+    XCTAssertNil([DiskUtil mountPointForPath:@"relative/path"]);
 }
 
-- (void)tearDown {
-    // Put teardown code here. This method is called after the invocation of each test method in the class.
-    [super tearDown];
-}
+- (void)testSymbolicLinkToAutomountIsRejected
+{
+    struct statfs *mounts;
+    int count = getmntinfo_r_np(&mounts, MNT_NOWAIT);
+    XCTAssertGreaterThan(count, 0);
+    if (count == 0)
+    {
+        return;
+    }
+    NSString *automount = nil;
+    for (int i = 0; i < count; i++)
+    {
+        if (strcmp(mounts[i].f_fstypename, "autofs") == 0)
+        {
+            automount = [NSString stringWithUTF8String:mounts[i].f_mntonname];
+            break;
+        }
+    }
+    free(mounts);
+    XCTSkipIf(automount == nil, @"No automount is configured on this Mac.");
 
-- (void)testExample {
-    // This is an example of a functional test case.
-    // Use XCTAssert and related functions to verify your tests produce the correct results.
-}
-
-- (void)testPerformanceExample {
-    // This is an example of a performance test case.
-    [self measureBlock:^{
-        // Put the code you want to measure the time of here.
-    }];
+    NSString *link = [NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+    NSFileManager *fileManager = NSFileManager.defaultManager;
+    NSError *error = nil;
+    if (![fileManager createSymbolicLinkAtPath:link withDestinationPath:automount error:&error])
+    {
+        XCTFail(@"Could not create the symbolic link: %@", error);
+        return;
+    }
+    XCTAssertNil([DiskUtil mountPointForPath:automount]);
+    XCTAssertNil([DiskUtil mountPointForPath:link]);
+    [fileManager removeItemAtPath:link error:NULL];
 }
 
 @end
